@@ -17,14 +17,27 @@ def returnDBCursor(host = "localhost", user = "root", password = "" , db = "wats
                      user=user,
                      db=db)
     cur = db.cursor()
-    return cur
+    return db, cur
 
-def checkId(userId):
-    
-    userId = cur.execute("select * from watsonbot where user_id = " + userId)     
-    print userId
-    return True
+def checkId(cur, userId):
+    cur.execute("select * from users where id = " + str(userId))     
+    if len(list(cur)) > 0:    
+      return True
+    else: return False
 
+def insertNewUser(db, cur, userId):
+    query = "insert into users (id) values (" + str(user_id) + ")"
+    cur.execute(query)
+    db.commit()
+
+def getArtPreference(cur, userId):
+    query = "select preference from users where id = " +str(userId)
+    cur.execute(query)
+    preference = ""
+    print list(cur)[0]
+    for preference in cur:
+      preference = preference
+    return preference
 
 def main():
     
@@ -32,14 +45,8 @@ def main():
     bot = telegram.Bot('178800175:AAF0skUmAYjSI60CezycyVcrm9QKSJFz7Bk')
 
     # Get database handler
-    cur = returnDBCursor()
-    user_id = 10
-    query = "insert into users (id) values (" + str(user_id) + ")"
-    print query
-    cur.execute(query)
-    
-      
-
+    db, cur = returnDBCursor()
+    print getArtPreference(cur, 10)    
 '''    
     # get the first pending update_id, this is so we can skip over it in case
     # we get an "Unauthorized" exception.
