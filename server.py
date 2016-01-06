@@ -41,7 +41,7 @@ def insertNewUser(db, cur, userId, update):
     db.commit()
 
 def getArtPreference(cur, userId):
-    query = "select preference from users where id = " +str(userId)
+    query = "select art_preference from users where id = " +str(userId)
     cur.execute(query)
     preference = cur.fetchone()[0]
     return preference
@@ -53,14 +53,27 @@ def saveGender(cur, db, userId, gender):
 
 def saveAge(cur, db, userId, age):
     query = "update users set age = '" + age + "' where id = "+ str(userId)
-    cur.execute(query)    
+    cur.execute(query)
+    db.commit()
     pass
 
 def saveCountry(cur, db, userId, country):
     query = "update users set country = '" + country + "' where id = "+ str(userId)
     cur.execute(query)    
+    db.commit()    
     pass
 
+def saveArtPreference(cur, db, userId, preference):
+    query = "update users set art_preference = '" + preference + "' where id = "+ str(userId)
+    cur.execute(query)    
+    db.commit()    
+    pass
+
+def saveDaysStaying(cur, db, userId, days):
+    query = "update users set stay_days = '" + days + "' where id = "+ str(userId)
+    cur.execute(query)    
+    db.commit()    
+    pass
 def incrementCurrentStep(cur, db, userId):
     query = "update users set current_step = current_step + 1 where id =" + str(userId)
     cur.execute(query)
@@ -125,7 +138,6 @@ def echo(bot, update_id, db, cur):
         
         keyboard = None
         responseMessage = ""
-        print user_id 
         keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
         
         print "received message: " + message
@@ -159,21 +171,21 @@ def keyboardmake(keyboardlist,resize=1,once=1,selective=''):
 def generateResponse(cur, db, user_id, message, update):
  if checkId(cur, user_id):
   userProfileStep = returnCurrentStep(cur, user_id)
-  print 'current step = ' + str(userProfileStep)
-  if userProfileStep < 6:
+  print 'current step = ' + str(userProfileStep) 
+  if userProfileStep < 7:
    keyboard, response = introductionConversation(cur, db, user_id, message, userProfileStep)
   else:
-   keyboard, response = regularConversation(cur, user_id, messsage)
+   keyboard, response = regularConversation(cur, user_id, message)
  else:
   insertNewUser(db, cur, user_id, update)
   keyboard = None
-  response = "test"
+  response = ""
+  keyboard, response = introductionConversation(cur, db, user_id, message, 0)
  return keyboard, response
   
 def introductionConversation(cur, db, user_id, message, userProfileStep):
  keyboard = None
  response = ""
- print userProfileStep
  if userProfileStep == 0:
   response = "Hi there, can I ask you some questions about yourself?"
   keyboard = keyboardmake([["Yes", "No"]])
@@ -183,7 +195,6 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
   
  elif userProfileStep == 1:
   if message == "Yes":
-   print 'the message is yes'
    response = "What is your gender?"
    keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
    incrementCurrentStep(cur, db, user_id)
@@ -220,27 +231,50 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
    
    return keyboard, response
    
-  elif userProfileStep == 3:
+ elif userProfileStep == 3:
     saveAge(cur, db, user_id, message)
     response = "What is your country of residence?"
     incrementCurrentStep(cur, db, user_id)
     
     return keyboard, response
 
-  elif userProfileStep == 4:
+ elif userProfileStep == 4:
     saveCountry(cur, db, user_id, message)
     response = "What kind of art do you like most?"
     keyboard = keyboardmake([["Modern", "Classic"]])
     incrementCurrentStep(cur, db, user_id)
     return keyboard, response
+  
+ elif userProfileStep == 5:
+      saveArtPreference(cur, db, user_id, message)
+      response = "How many days are you staying?"
+      incrementCurrentStep(cur, db, user_id)
+      return keyboard, response
 
-  elif userProfileStep == 5:
-      saveArtPreference(user_id, message)
+ elif userProfileStep == 6:
+      saveDaysStaying(cur, db, user_id, message)
       incrementCurrentStep(cur, db, user_id)
       keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],["Random specific question"],["I have another question about Amsterdam!"]])
       response = "Awesome, how can I help?"
       return keyboard, response
 
+def regularConversation(cur, user_id, message):
+	randomQuestion1 = "What is the biggest lake of Amsterdam?"
+	keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[randomQuestion1],["I have another question about Amsterdam!"]])
+	response = "Awesome, how can I help?"
+	
+	if message == "What is a fun thing to do in Amsterdam?":
+		ourWatsonQuestion = "museum " + getArtPreference(cur, user_id) + " art"
+		response = getAnswer(ourWatsonQuestion)
+	
+	elif message == "I have another question about Amsterdam!":
+		response = "Sure, ask your question!"
+		keyboard = None
+	
+	else:
+		response = getAnswer(message)
+	
+	return keyboard, response
 
 def getAnswer(question):
     url = 'https://dal09-gateway.watsonplatform.net/instance/568/deepqa/v1/question'
