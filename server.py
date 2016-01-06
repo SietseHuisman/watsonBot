@@ -4,6 +4,7 @@ import json, requests
 from requests.auth import HTTPBasicAuth
 from decimal import Decimal
 import MySQLdb
+import random
 
 try:
     from urllib.error import URLError
@@ -87,7 +88,7 @@ def returnCurrentStep(cur, userId):
     return currentStep
 
 def setLastCurrentStep(cur, db, userId):
-    query = "update users set current_step = 5 where id =" + str(userId)
+    query = "update users set current_step = 7 where id =" + str(userId)
     cur.execute(query)
     db.commit()
 
@@ -201,7 +202,7 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
    return keyboard, response
    
   elif message == "No":
-   response = "Don't worry, I can still answer your questions about Amsterdam! I can't give your personalized suggestions."
+   response = "Don't worry, I can still answer your questions about Amsterdam! I can't give you personalized suggestions however."
    setLastProfileStep(cur, db, user_id)
    
    return keyboard, response
@@ -254,13 +255,13 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
  elif userProfileStep == 6:
       saveDaysStaying(cur, db, user_id, message)
       incrementCurrentStep(cur, db, user_id)
-      keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],["Random specific question"],["I have another question about Amsterdam!"]])
+      keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
       response = "Awesome, how can I help?"
       return keyboard, response
 
 def regularConversation(cur, user_id, message):
-	randomQuestion1 = "What is the biggest lake of Amsterdam?"
-	keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[randomQuestion1],["I have another question about Amsterdam!"]])
+	
+	keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
 	response = "Awesome, how can I help?"
 	
 	if message == "What is a fun thing to do in Amsterdam?":
@@ -290,9 +291,18 @@ def getAnswer(question):
     #if Decimal(r.json()['question']['evidencelist'][0]['value']) < Decimal(0.6):
      #   return "I'm not sure, I'm sorry :("
     #else:
-    return r.json()['question']['evidencelist'][0]['title'] + ", i am " + str(r.json()['question']['evidencelist'][0]['value']) + " out of 1 confident about this"  
     
+    print r
+    if r.json()['question']['evidencelist'][0] != {}:
+        return r.json()['question']['evidencelist'][0]['title'] + ", i am " + str(r.json()['question']['evidencelist'][0]['value']) + " out of 1 confident about this"
+    else:
+        return "sorry, i did not find anything"
     
+def getRandomQuestion():
+	questions = ('What is the biggest lake of Amsterdam?', 'How do I rent a bike in Amsterdam?', 'Question 3', 'Question 4', 'Question 5', 'Question6', 'Question7', 'Question8', 'Question9', 'Question10', 'Question11' )
+	randomNumber = random.randrange(0, len(questions)-1, 1)
+	
+	return questions[randomNumber]
 
 if __name__ == '__main__':
     main()
