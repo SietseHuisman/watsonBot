@@ -1,12 +1,3 @@
-import os
-try:
-  from SimpleHTTPServer import SimpleHTTPRequestHandler as Handler
-  from SocketServer import TCPServer as Server
-except ImportError:
-  from http.server import SimpleHTTPRequestHandler as Handler
-  from http.server import HTTPServer as Server
-
-import logging
 import telegram
 from time import sleep
 import json, requests
@@ -20,22 +11,36 @@ except ImportError:
     from urllib2 import URLError  # python 2
 
 
+
+def returnDBCursor(host = "localhost", user = "root", password = "" , db = "watsonbot"):
+    db = MySQLdb.connect(host=host,    
+                     user=user,
+                     db=db)
+    cur = db.cursor()
+    return cur
+
+def checkId(userId):
+    
+    userId = cur.execute("select * from watsonbot where user_id = " + userId)     
+    print userId
+    return True
+
+
 def main():
     
     # Telegram Bot Authorization Token
     bot = telegram.Bot('178800175:AAF0skUmAYjSI60CezycyVcrm9QKSJFz7Bk')
 
-    db = MySQLdb.connect(host="localhost",    # your host, usually localhost
-                     user="root",             # your username
-                     db="watsonbot")
-
-    cur = db.cursor()
+    # Get database handler
+    cur = returnDBCursor()
+    user_id = 10
+    query = "insert into users (id) values (" + str(user_id) + ")"
+    print query
+    cur.execute(query)
     
-    user_id = 5
-    cur.execute("insert into watsonbot (id) values (user_id)")    
-    
+      
 
-
+'''    
     # get the first pending update_id, this is so we can skip over it in case
     # we get an "Unauthorized" exception.
     try:
@@ -46,10 +51,13 @@ def main():
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
+
     while True:
+        
         try:
             update_id = echo(bot, update_id)
-            
+        
+        
         except telegram.TelegramError as e:
             # These are network problems with Telegram.
             if e.message in ("Bad Gateway", "Timed out"):
@@ -62,14 +70,9 @@ def main():
         except URLError as e:
             # These are network problems on our end.
  	         sleep(1)
-    
+'''
 
 def echo(bot, update_id):
-
-    
-    
-    
-    
     # Request updates after the last update_id
     for update in bot.getUpdates(offset=update_id, timeout=10):
         # chat_id is required to reply to any message
@@ -77,9 +80,8 @@ def echo(bot, update_id):
         update_id = update.update_id + 1
         message = update.message.text
         print "received message: " + message
-        responseMessage = getAnswer(message)python
+        responseMessage = getAnswer(message)
         print "response: " + responseMessage
-
 
         if message:
             # Reply to the message
@@ -90,7 +92,6 @@ def echo(bot, update_id):
 
 
 def getAnswer(question):
-    
     url = 'https://dal09-gateway.watsonplatform.net/instance/568/deepqa/v1/question'
     data = {
                 "question" : {
