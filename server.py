@@ -26,18 +26,26 @@ def checkId(cur, userId):
     else: return False
 
 def insertNewUser(db, cur, userId):
-    query = "insert into users (id) values (" + str(user_id) + ")"
+    query = "insert into users (id, current_step) values (" + str(user_id) + ", 1)"
     cur.execute(query)
     db.commit()
 
 def getArtPreference(cur, userId):
     query = "select preference from users where id = " +str(userId)
     cur.execute(query)
-    preference = ""
-    print list(cur)[0]
-    for preference in cur:
-      preference = preference
+    preference = cur.fetchone()[0]
     return preference
+
+def updateCurrentStep(cur, db, userId):
+    query = "update users set current_step = current_step + 1 where id =" + str(userId)
+    cur.execute(query)
+    pass
+
+def returnCurrentStep(cur, userId):
+    query = "select current_step from users where id = " + str(userId)
+    cur.execute(query)
+    currentStep = cur.fetchone()[0]
+    return currentStep
 
 def main():
     
@@ -46,8 +54,7 @@ def main():
 
     # Get database handler
     db, cur = returnDBCursor()
-    print getArtPreference(cur, 10)    
-'''    
+       
     # get the first pending update_id, this is so we can skip over it in case
     # we get an "Unauthorized" exception.
     try:
@@ -77,7 +84,7 @@ def main():
         except URLError as e:
             # These are network problems on our end.
  	         sleep(1)
-'''
+
 
 def echo(bot, update_id):
     # Request updates after the last update_id
@@ -108,7 +115,7 @@ def getAnswer(question):
     headers = {'content-type': 'application/json', 'Accept':' application/json', 'Cache-Control':'no-cache', 'X-SyncTimeout':'30'}
     r = requests.post(url, data=json.dumps(data), headers=headers, auth=HTTPBasicAuth('vua_student9', 'Spx1fkVd'))
     
-    print Decimal(r.json()['question']['evidencelist'][0]['value']) < Decimal(0.6)
+    #print Decimal(r.json()['question']['evidencelist'][0]['value']) < Decimal(0.6)
     #if Decimal(r.json()['question']['evidencelist'][0]['value']) < Decimal(0.6):
      #   return "I'm not sure, I'm sorry :("
     #else:
