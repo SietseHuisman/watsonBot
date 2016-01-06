@@ -25,8 +25,18 @@ def checkId(cur, userId):
       return True
     else: return False
 
-def insertNewUser(db, cur, userId):
-    query = "insert into users (id, current_step) values (" + str(user_id) + ", 1)"
+def insertNewUser(db, cur, userId, update):
+    
+    if update.first_name:    
+        firstName = update.first_name
+    else:
+        firstName = ""
+
+    if update.last_name:  
+        lastName = update.last_name
+    else:
+        lastName = ""
+    query = "insert into users (id, first_name, last_name, current_step) values (" + str(userId) + ", '" + firstName + "', '" + lastName + "',0)"
     cur.execute(query)
     db.commit()
 
@@ -36,9 +46,16 @@ def getArtPreference(cur, userId):
     preference = cur.fetchone()[0]
     return preference
 
-def updateCurrentStep(cur, db, userId):
+def saveGender(cur, db, userId, gender):
+    query = "update users set gender = '" + gender + "' where id = "+ str(userId)
+    cur.execute(query)    
+    pass
+
+
+def incrementCurrentStep(cur, db, userId):
     query = "update users set current_step = current_step + 1 where id =" + str(userId)
     cur.execute(query)
+    db.commit()
     pass
 
 def returnCurrentStep(cur, userId):
@@ -46,6 +63,11 @@ def returnCurrentStep(cur, userId):
     cur.execute(query)
     currentStep = cur.fetchone()[0]
     return currentStep
+
+def setLastCurrentStep(cur, db, userId):
+    query = "update users set current_step = 5 where id =" + str(userId)
+    cur.execute(query)
+    db.commit()
 
 def main():
     
@@ -62,16 +84,12 @@ def main():
     except IndexError:
         update_id = None
 
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
 
     while True:
         
         try:
-            update_id = echo(bot, update_id)
-        
-        
+            update_id = echo(bot, update_id, db, cur)
+            
         except telegram.TelegramError as e:
             # These are network problems with Telegram.
             if e.message in ("Bad Gateway", "Timed out"):
@@ -86,23 +104,118 @@ def main():
  	         sleep(1)
 
 
-def echo(bot, update_id):
+def echo(bot, update_id, db, cur):
     # Request updates after the last update_id
     for update in bot.getUpdates(offset=update_id, timeout=10):
         # chat_id is required to reply to any message
         chat_id = update.message.chat_id
         update_id = update.update_id + 1
+        
+        user_id = update.message.chat.id
         message = update.message.text
+        
+        keyboard = None
+        responseMessage = ""
+        print user_id 
+        keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
+        
         print "received message: " + message
-        responseMessage = getAnswer(message)
         print "response: " + responseMessage
 
         if message:
             # Reply to the message
             bot.sendMessage(chat_id=chat_id,
-                            text = responseMessage)
+                            text = responseMessage,
+                            reply_markup=keyboard)
             
     return update_id
+
+#generates keyboards
+def keyboardmake(keyboardlist,resize=1,once=1,selective=''):
+ if(resize==1):
+  options="\"resize_keyboard\":true"
+ else:
+  options="\"resize_keyboard\":false"
+ if(once==1):
+  options=options+","+"\"one_time_keyboard\":true"
+ else:
+  options=options+","+"\"one_time_keyboard\":false"
+ if(selective==1):
+  options=options+","+"\"selective\":1"
+ if(selective==2):
+  options=options+","+"\"selective\":2"
+ return("{\"keyboard\":"+json.dumps(keyboardlist).replace('"', '\"')+","+options+"}")
+
+
+def generateResponse(cur, db, user_id, message, update):
+ if checkId(cur, user_id):
+  userProfileStep = returnCurrentStep(cur, user_id)
+  print 'current step = ' + str(userProfileStep)
+  if userProfileStep < 6:
+   keyboard, response = introductionConversation(cur, db, user_id, message, userProfileStep)
+  else:
+   keyboard, response = regularConversation(cur, user_id, messsage)
+ else:
+  insertNewUser(db, cur, user_id, update)
+  keyboard = None
+  response = "test"
+ return keyboard, response
+  
+def introductionConversation(cur, db, user_id, message, userProfileStep):
+ keyboard = None
+ response = ""
+ print userProfileStep
+ if userProfileStep == 0:
+  response = "Hi there, can I ask you some questions about yourself?"
+  keyboard = keyboardmake([["Yes", "No"]])
+  incrementCurrentStep(cur, db, user_id)
+  
+  return keyboard, response
+  
+ elif userProfileStep == 1:
+  if message == "Yes":
+   print 'the message is yes'
+   response = "What is your gender?"
+   keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
+   incrementCurrentStep(cur, db, user_id)
+   return keyboard, response
+   
+  elif message == "No":
+   response = "Don't worry, I can still answer your questions about Amsterdam! I can't give your personalized suggestions."
+   setLastProfileStep(cur, db, user_id)
+   
+   return keyboard, response
+
+  else:
+   reponse = "Please click yes or no."
+   keyboard = keyboardmake([["Yes", "No"]])
+   
+   return keyboard, response
+
+ elif userProfileStep == 2:
+  if message == "I'm a MALE":
+   saveGender(cur, db, user_id, "male")
+   
+   response = "To what age category do you belong?"
+   keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
+   incrementCurrentStep(cur, db, user_id)
+   
+   return keyboard, response
+   
+  elif message == "I'm a FEMALE":
+   saveGender(user_id, "female")
+   
+   response = "To what age category do you belong?"
+   keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
+   incrementCurrentStep(cur, db, user_id)
+   
+   return keyboard, response
+  
+  else:
+  
+   response = "Please select your gender."
+   keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
+   return keyboard, response
 
 
 def getAnswer(question):
