@@ -51,6 +51,15 @@ def saveGender(cur, db, userId, gender):
     cur.execute(query)    
     pass
 
+def saveAge(cur, db, userId, age):
+    query = "update users set age = '" + age + "' where id = "+ str(userId)
+    cur.execute(query)    
+    pass
+
+def saveCountry(cur, db, userId, country):
+    query = "update users set country = '" + country + "' where id = "+ str(userId)
+    cur.execute(query)    
+    pass
 
 def incrementCurrentStep(cur, db, userId):
     query = "update users set current_step = current_step + 1 where id =" + str(userId)
@@ -203,19 +212,34 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
    return keyboard, response
    
   elif message == "I'm a FEMALE":
-   saveGender(user_id, "female")
+   saveGender(cur, db, user_id, "female")
    
    response = "To what age category do you belong?"
    keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
    incrementCurrentStep(cur, db, user_id)
    
    return keyboard, response
-  
-  else:
-  
-   response = "Please select your gender."
-   keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
-   return keyboard, response
+   
+  elif userProfileStep == 3:
+    saveAge(cur, db, user_id, message)
+    response = "What is your country of residence?"
+    incrementCurrentStep(cur, db, user_id)
+    
+    return keyboard, response
+
+  elif userProfileStep == 4:
+    saveCountry(cur, db, user_id, message)
+    response = "What kind of art do you like most?"
+    keyboard = keyboardmake([["Modern", "Classic"]])
+    incrementCurrentStep(cur, db, user_id)
+    return keyboard, response
+
+  elif userProfileStep == 5:
+      saveArtPreference(user_id, message)
+      incrementCurrentStep(cur, db, user_id)
+      keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],["Random specific question"],["I have another question about Amsterdam!"]])
+      response = "Awesome, how can I help?"
+      return keyboard, response
 
 
 def getAnswer(question):
