@@ -131,24 +131,24 @@ def echo(bot, update_id, db, cur):
     # Request updates after the last update_id
     for update in bot.getUpdates(offset=update_id, timeout=10):
         # chat_id is required to reply to any message
-        chat_id = update.message.chat_id
-        update_id = update.update_id + 1
         
+	chat_id = update.message.chat_id
         user_id = update.message.chat.id
-        message = update.message.text
-        
-        keyboard = None
-        responseMessage = ""
-        keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
-        
-        print "received message: " + message
-        print "response: " + responseMessage
-
-        if message:
-            # Reply to the message
-            bot.sendMessage(chat_id=chat_id,
-                            text = responseMessage,
-                            reply_markup=keyboard)
+	if chat_id > 0:
+	    message = update.message.text
+	    
+	    keyboard = None
+	    responseMessage = ""
+	    keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
+	    update_id = update.update_id + 1
+	    print "received message: " + message
+	    print "response: " + responseMessage
+    
+	    if message:
+		# Reply to the message
+		bot.sendMessage(chat_id=chat_id,
+				text = responseMessage,
+				reply_markup=keyboard)
             
     return update_id
 
@@ -185,13 +185,14 @@ def generateResponse(cur, db, user_id, message, update):
  return keyboard, response
   
 def introductionConversation(cur, db, user_id, message, userProfileStep):
+ print 'generating response with profile step ' + str(userProfileStep)
  keyboard = None
  response = ""
  if userProfileStep == 0:
+  print "profilestep equals 0"
   response = "Hi there, can I ask you some questions about yourself?"
   keyboard = keyboardmake([["Yes", "No"]])
   incrementCurrentStep(cur, db, user_id)
-  
   return keyboard, response
   
  elif userProfileStep == 1:
@@ -208,7 +209,7 @@ def introductionConversation(cur, db, user_id, message, userProfileStep):
    return keyboard, response
 
   else:
-   reponse = "Please click yes or no."
+   response = "Please click yes or no."
    keyboard = keyboardmake([["Yes", "No"]])
    
    return keyboard, response
