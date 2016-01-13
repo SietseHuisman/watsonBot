@@ -371,6 +371,7 @@ def getAnswerDetails(question):
 	headers = {'content-type': 'application/json', 'Accept':' application/json', 'Cache-Control':'no-cache', 'X-SyncTimeout':'30'}
 	r = requests.post(url, data=json.dumps(data), headers=headers, auth=HTTPBasicAuth('vua_student9', 'Spx1fkVd'))
 	
+        
 	if len(r.json()['question']['evidencelist'][0]) != 0:
 		answerTitle = r.json()['question']['evidencelist'][0]['title']
 		answerText = r.json()['question']['evidencelist'][0]['text']
