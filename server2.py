@@ -41,6 +41,10 @@ def insertNewUser(db, cur, userId, update):
     cur.execute(query)
     db.commit()
 
+def deleteUser(db, cur, userId):
+	query = "DELETE FROM users WHERE id = " + str(userId)
+	cur.execute(query)
+	db.commit()
     
 def userHasPreference(cur, userId, preference):
 	query = "select " + preference + " from users where id = " + str(userId)
@@ -82,10 +86,11 @@ def saveMuseumPreference(cur, db, userId, preference):
     pass
 
 def saveDaysStaying(cur, db, userId, days):
-    query = "update users set stay_days = '" + days + "' where id = "+ str(userId)
+    query = "update users set stay_days = '" + str(days) + "' where id = "+ str(userId)
     cur.execute(query)    
     db.commit()    
     pass
+
 def incrementCurrentStep(cur, db, userId):
     query = "update users set current_step = current_step + 1 where id =" + str(userId)
     cur.execute(query)
@@ -181,15 +186,23 @@ def echo(bot, update_id, db, cur):
         
         user_id = update.message.chat.id
         message = update.message.text
-        
+
+        #removes emoticons (Watson doesn't like them)
+        message = message.encode('ascii', 'ignore').decode('ascii')
+		
         keyboard = None
         responseMessage = ""
-        keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
         
-        print "received message: " + message
+        if message != "":
+        	keyboard, responseMessage = generateResponse(cur, db,  user_id, message, update.message.chat)
+        else:
+			keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
+			responseMessage = "I really like your emoticon or sticker!"
+        	
+    	print "received message: " + message
         print "response: " + responseMessage
 
-        if message:
+        if responseMessage:
             # Reply to the message
             bot.sendMessage(chat_id=chat_id,
                             text = responseMessage,
@@ -213,102 +226,129 @@ def keyboardmake(keyboardlist,resize=1,once=1,selective=''):
   options=options+","+"\"selective\":2"
  return("{\"keyboard\":"+json.dumps(keyboardlist).replace('"', '\"')+","+options+"}")
 
+	
 
 def generateResponse(cur, db, user_id, message, update):
- if checkId(cur, user_id):
-  userProfileStep = returnCurrentStep(cur, user_id)
-  print 'current step = ' + str(userProfileStep) 
-  if userProfileStep < 7:
-   keyboard, response = introductionConversation(cur, db, user_id, message, userProfileStep)
-  else:
-   keyboard, response = regularConversation(cur, user_id, message)
- else:
-  insertNewUser(db, cur, user_id, update)
-  keyboard = None
-  response = ""
-  keyboard, response = introductionConversation(cur, db, user_id, message, 0)
- return keyboard, response
+	if checkId(cur, user_id):
+  		userProfileStep = returnCurrentStep(cur, user_id)
+  		print 'current step = ' + str(userProfileStep) 
+  		
+  		if userProfileStep < 7:
+   			keyboard, response = introductionConversation(cur, db, user_id, message, userProfileStep)
+  		else:
+   			keyboard, response = regularConversation(cur, db, user_id, message)
+ 	else:
+  		insertNewUser(db, cur, user_id, update)
+  		keyboard = None
+  		response = ""
+  		keyboard, response = introductionConversation(cur, db, user_id, message, 0)
+ 
+	return keyboard, response
   
 def introductionConversation(cur, db, user_id, message, userProfileStep):
- keyboard = None
- response = ""
- if userProfileStep == 0:
-  response = "Hi there, can I ask you some questions about yourself?"
-  keyboard = keyboardmake([["Yes", "No"]])
-  incrementCurrentStep(cur, db, user_id)
-  
-  return keyboard, response
-  
- elif userProfileStep == 1:
-  if message == "Yes":
-   response = "What is your gender?"
-   keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
-   incrementCurrentStep(cur, db, user_id)
-   return keyboard, response
-   
-  elif message == "No":
-   response = "Don't worry, I can still answer your questions about Amsterdam! I can't give you personalized suggestions however."
-   setLastCurrentStep(cur, db, user_id)
-   
-   return keyboard, response
+	keyboard = None
+	response = ""
+	 
+	if userProfileStep == 0:
+		response = "Hi there, can I ask you some questions about yourself?"
+		keyboard = keyboardmake([["Yes", "No"]])
+		incrementCurrentStep(cur, db, user_id)
+		return keyboard, response
+	  
+	elif userProfileStep == 1:
+		if message == "Yes":
+			response = "What is your gender?"
+			keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response
+		elif message == "No":
+			response = "Don't worry, I can still answer your questions about Amsterdam! I can't give you personalized suggestions however."
+			keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
+			setLastCurrentStep(cur, db, user_id)
+			return keyboard, response
+		else:
+			response = "Can I ask you some questions first? Please click yes or no."
+			keyboard = keyboardmake([["Yes", "No"]])
+			return keyboard, response
 
-  else:
-   reponse = "Please click yes or no."
-   keyboard = keyboardmake([["Yes", "No"]])
-   
-   return keyboard, response
+	elif userProfileStep == 2:
+		if message == "I'm a MALE":
+			saveGender(cur, db, user_id, "male")
+			response = "To what age category do you belong?"
+			keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response	
+		elif message == "I'm a FEMALE":
+			saveGender(cur, db, user_id, "female")
+			response = "To what age category do you belong?"
+			keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response
+		else:
+			response = "Please select your gender:"
+			keyboard = keyboardmake([["I'm a MALE", "I'm a FEMALE"]])
+			return keyboard, response
+	  	
+	elif userProfileStep == 3:
+		if stringIsAgeCategory(message):
+			saveAge(cur, db, user_id, message)
+			response = "And what is your country of residence?"
+			keyboard = None
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response
+		else:
+			response = "How old are you? Please select one of the categories:"
+			keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
+			return keyboard, response
 
- elif userProfileStep == 2:
-  if message == "I'm a MALE":
-   saveGender(cur, db, user_id, "male")
-   
-   response = "To what age category do you belong?"
-   keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
-   incrementCurrentStep(cur, db, user_id)
-   
-   return keyboard, response
-   
-  elif message == "I'm a FEMALE":
-   saveGender(cur, db, user_id, "female")
-   
-   response = "To what age category do you belong?"
-   keyboard = keyboardmake([["<18", "18-24"], ["25-34", "35-44"], ["45-54", "55-64"], [">64"]])
-   incrementCurrentStep(cur, db, user_id)
-   
-   return keyboard, response
-   
- elif userProfileStep == 3:
-    saveAge(cur, db, user_id, message)
-    response = "And what is your country of residence?"
-    incrementCurrentStep(cur, db, user_id)
-    
-    return keyboard, response
+	elif userProfileStep == 4:
+		saveCountry(cur, db, user_id, message)
+		response = "Do you like to visit a museum during your stay?"
+		keyboard = keyboardmake([["Yes", "No"]])
+		incrementCurrentStep(cur, db, user_id)
+		return keyboard, response
+	  
+	elif userProfileStep == 5:
+		if message == "Yes" or message == "yes":
+			saveMuseumPreference(cur, db, user_id, 1)
+			response = "Finally, how many days are you staying?"
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response
+		
+		elif message == "No" or message == "no":
+			saveMuseumPreference(cur, db, user_id, 0)
+			response = "Finally, how many days are you staying?"
+			incrementCurrentStep(cur, db, user_id)
+			return keyboard, response
+		else:
+			response = "Museums, yes or no?"
+			keyboard = keyboardmake([["Yes", "No"]])
+			return keyboard, response
+		
 
- elif userProfileStep == 4:
-    saveCountry(cur, db, user_id, message)
-    response = "Do you like to visit a museum during your stay?"
-    keyboard = keyboardmake([["Yes", "No"]])
-    incrementCurrentStep(cur, db, user_id)
-    return keyboard, response
-  
- elif userProfileStep == 5:
-	if message == "Yes":
-		saveMuseumPreference(cur, db, user_id, 1)
+	elif userProfileStep == 6:
+		try:
+			message = int(message)
+			saveDaysStaying(cur, db, user_id, message)
+			incrementCurrentStep(cur, db, user_id)
+			keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
+			response = "Awesome, how can I help?"
+			return keyboard, response
+		except ValueError:
+			response = "Please fill in a number, how many days are you staying?"
+			keyboard = None
+			return keyboard, response
+			
+		
+
+
+def stringIsAgeCategory(ageCategory):
+	if ageCategory == "<18" or ageCategory == "18-24" or ageCategory == "25-34" or ageCategory == "35-44" or ageCategory == "45-54" or ageCategory == "55-64" or ageCategory == "65+":
+		return True
 	else:
-		saveMuseumPreference(cur, db, user_id, 0)
-	
-	response = "Finally, how many days are you staying?"
-	incrementCurrentStep(cur, db, user_id)
-	return keyboard, response
+		return False
 
- elif userProfileStep == 6:
-      saveDaysStaying(cur, db, user_id, message)
-      incrementCurrentStep(cur, db, user_id)
-      keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
-      response = "Awesome, how can I help?"
-      return keyboard, response
-
-def regularConversation(cur, user_id, message):
+def regularConversation(cur, db, user_id, message):
 	
 	keyboard = keyboardmake([["What is a fun thing to do in Amsterdam?"],[getRandomQuestion()],["I have another question about Amsterdam!"]])
 	response = "Awesome, how can I help?"
@@ -335,6 +375,11 @@ def regularConversation(cur, user_id, message):
 	
 	elif message == "/start":
 		response = "Welcome back " + getFirstName(cur, user_id)  + ". How can I help?"
+	
+	elif message == "/deleteme":
+		deleteUser(db, cur, user_id)
+		response = "Your account has been reset."
+		keyboard = None
 	
 	else:
 		answerTitle, answerText, answerConfidence = getAnswerDetails(message)
@@ -371,12 +416,13 @@ def getAnswerDetails(question):
 	headers = {'content-type': 'application/json', 'Accept':' application/json', 'Cache-Control':'no-cache', 'X-SyncTimeout':'30'}
 	r = requests.post(url, data=json.dumps(data), headers=headers, auth=HTTPBasicAuth('vua_student9', 'Spx1fkVd'))
 	
-        
-	if len(r.json()['question']['evidencelist'][0]) != 0:
-		answerTitle = r.json()['question']['evidencelist'][0]['title']
-		answerText = r.json()['question']['evidencelist'][0]['text']
-		answerConfidence = r.json()['question']['evidencelist'][0]['value']
-		answerConfidence = int(float(answerConfidence)*100)
+	
+	if 'question' in r.json():
+		if len(r.json()['question']['evidencelist'][0]) != 0:
+			answerTitle = r.json()['question']['evidencelist'][0]['title']
+			answerText = r.json()['question']['evidencelist'][0]['text']
+			answerConfidence = r.json()['question']['evidencelist'][0]['value']
+			answerConfidence = int(float(answerConfidence)*100)
 	
 
 	return answerTitle, answerText, answerConfidence
