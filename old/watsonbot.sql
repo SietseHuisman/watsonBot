@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 15, 2016 at 01:50 PM
+-- Generation Time: Jan 13, 2016 at 11:17 AM
 -- Server version: 5.6.16
 -- PHP Version: 5.5.11
 
@@ -462,9 +462,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `age` varchar(30) DEFAULT NULL,
   `gender` varchar(30) DEFAULT NULL,
   `museum_preference` tinyint(1) DEFAULT NULL,
-  `art_preference` varchar(10) DEFAULT NULL,
   `current_step` int(11) DEFAULT NULL,
-  `advertisement_step` int(11) NOT NULL DEFAULT '0',
   `last_activity` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `country` varchar(30) NOT NULL,
   PRIMARY KEY (`id`),
@@ -475,8 +473,13 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `date_created`, `stay_days`, `first_name`, `last_name`, `age`, `gender`, `museum_preference`, `art_preference`, `current_step`, `advertisement_step`, `last_activity`, `country`) VALUES
-(12602168, '2016-01-15 12:49:06', 5, 'Rogier', 'M', '25-34', 'male', 1, 'modern', 8, 0, '2016-01-15 12:49:29', 'Holland');
+INSERT INTO `users` (`id`, `date_created`, `stay_days`, `first_name`, `last_name`, `age`, `gender`, `museum_preference`, `current_step`, `last_activity`, `country`) VALUES
+(12602168, '2016-01-08 19:40:21', 3, 'Rogier', 'M', '25-34', 'male', 1, 7, '2016-01-08 19:41:07', 'Holland'),
+(13343043, '2016-01-07 20:46:17', 14, 'P.', 'Janssen', '18-24', 'male', 0, 7, '2016-01-07 20:46:48', 'Netherlands'),
+(107224066, '2016-01-08 18:59:27', NULL, 'Elmar', '', NULL, NULL, 1, 7, '2016-01-08 18:59:30', ''),
+(135637739, '2016-01-08 10:04:07', 0, 'LM.', 'Austin', '18-24', 'female', 0, 7, '2016-01-08 10:21:20', 'Netherlands'),
+(171574669, '2016-01-06 15:51:12', 3, 'Aske', '', '25-34', 'male', 0, 7, '2016-01-06 15:51:34', 'Netherlands'),
+(171602145, '2016-01-07 21:24:03', 0, 'Isabel', 'Vladar Rivero', '18-24', 'female', 0, 7, '2016-01-07 21:25:42', 'Netherlands');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
